@@ -29,8 +29,12 @@ namespace Contoso_Bot
                 string x = await luisclient.GetStringAsync(new Uri("https://api.projectoxford.ai/luis/v2.0/apps/0bc944f0-ba4d-4c3c-9588-7587eabcd1d8?subscription-key=fe392207fc69410cb8f52911ac8b4599&q="+ activity.Text));
                 rootObject = JsonConvert.DeserializeObject<intent.RootObject>(x);
                 string intent = rootObject.topScoringIntent.intent;
-                // return our reply to the user
-                Activity reply = activity.CreateReply($"Your intent was {intent}.");
+                Activity reply = activity.CreateReply($"Sorry, please reword that.");
+                if (intent == "greeting")
+                {
+                    reply = activity.CreateReply($"Hello, how may I help you today?");
+                }
+
                 await connector.Conversations.ReplyToActivityAsync(reply);
             }
             else
