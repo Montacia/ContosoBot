@@ -7,6 +7,7 @@ using System.Web.Http;
 using System.Web.Http.Description;
 using Microsoft.Bot.Connector;
 using Newtonsoft.Json;
+using Microsoft.WindowsAzure.MobileServices;
 
 namespace Contoso_Bot
 {
@@ -22,9 +23,10 @@ namespace Contoso_Bot
             if (activity.Type == ActivityTypes.Message)
             {
                 ConnectorClient connector = new ConnectorClient(new Uri(activity.ServiceUrl));
+                MobileServiceClient dbclient = AzureManager.AzureManagerInstance.AzureClient;
                 intent.RootObject rootObject;
-                HttpClient client = new HttpClient();
-                string x = await client.GetStringAsync(new Uri("https://api.projectoxford.ai/luis/v2.0/apps/0bc944f0-ba4d-4c3c-9588-7587eabcd1d8?subscription-key=fe392207fc69410cb8f52911ac8b4599&q="+ activity.Text));
+                HttpClient luisclient = new HttpClient();
+                string x = await luisclient.GetStringAsync(new Uri("https://api.projectoxford.ai/luis/v2.0/apps/0bc944f0-ba4d-4c3c-9588-7587eabcd1d8?subscription-key=fe392207fc69410cb8f52911ac8b4599&q="+ activity.Text));
                 rootObject = JsonConvert.DeserializeObject<intent.RootObject>(x);
                 string intent = rootObject.topScoringIntent.intent;
                 // return our reply to the user
