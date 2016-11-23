@@ -9,70 +9,10 @@ using Microsoft.Bot.Connector;
 using Newtonsoft.Json;
 using Microsoft.WindowsAzure.MobileServices;
 using System.Collections.Generic;
-using Microsoft.Bot.Builder.Dialogs;
 using Contoso_Bot.DataModels;
 
 namespace Contoso_Bot
 {
-    [Serializable]
-    public class loginDialog : IDialog<object>
-    {
-        protected string username;
-        protected string password;
-        public async Task StartAsync(IDialogContext context)
-        {
-            context.Wait(MessageReceivedAsync);
-        }
-        public async Task MessageReceivedAsync(IDialogContext context, IAwaitable<IMessageActivity> argument)
-        {
-            PromptDialog.Text(
-                context,
-                storeuser,
-                "Please type in your Username."
-                );
-            PromptDialog.Text(
-                context,
-                storepass,
-                "Please type in your Password."
-                );
-            await context.PostAsync(this.username + this.password);
-            context.Wait(MessageReceivedAsync);
-        }
-        public async Task storeuser(IDialogContext context, IAwaitable<string> argument)
-        {
-            var username = await argument;
-
-            this.username = username;
-
-            context.Wait(MessageReceivedAsync);
-        }
-        public async Task storepass(IDialogContext context, IAwaitable<string> argument)
-        {
-            var password = await argument;
-
-            this.password = password;
-
-            context.Wait(MessageReceivedAsync);
-        }
-    }
-    
-
-    [Serializable]
-    public class updateDialog : IDialog<object>
-    {
-        public async Task StartAsync(IDialogContext context)
-        {
-            context.Wait(MessageReceivedAsync);
-        }
-        public async Task MessageReceivedAsync(IDialogContext context, IAwaitable<IMessageActivity> argument)
-        {
-            
-            var message = await argument;
-            await context.PostAsync("You said: " + message.Text);
-            context.Wait(MessageReceivedAsync);
-        }
-    }
-
     [BotAuthentication]
     public class MessagesController : ApiController
     {
@@ -93,6 +33,40 @@ namespace Contoso_Bot
                 {
                     Activity reply = activity.CreateReply($"I can tell you about the current exchange rates, accounts, cards, kiwisaver, loans, mortgages and term deposits. \n I can also do this.");
                     await connector.Conversations.ReplyToActivityAsync(reply);
+                }
+                else if (userData.GetProperty<bool>("storeusername"))
+                {
+                    userData.SetProperty<string>("username", activity.Text);
+                    userData.SetProperty<bool>("storeusername", false);
+                    userData.SetProperty<bool>("storepassword", true);
+                    Activity reply = activity.CreateReply($"Please enter your password.");
+                    await connector.Conversations.ReplyToActivityAsync(reply);
+                }
+                else if (userData.GetProperty<bool>("storepassword"))
+                {
+                    userData.SetProperty<string>("password", activity.Text);
+                    contosodb logininfo = new contosodb() {username = userData.GetProperty<string>("username"),
+                    password = userData.GetProperty<string>("password")};
+                    await AzureManager.AzureManagerInstance.getuserinfo(logininfo);
+                    if (logininfo.username != userData.GetProperty<string>("username"))
+                    {
+                        userData.SetProperty<bool>("storeusername", true);
+                        userData.SetProperty<bool>("storepassword", false);
+                        Activity reply = activity.CreateReply($"Wrong credentials please try again.");
+                        await connector.Conversations.ReplyToActivityAsync(reply);
+                    }
+                    else
+                    {
+                        userData.SetProperty<bool>("storepassword", false);
+                        userData.SetProperty<bool>("loggedin", true);
+                        Activity reply = activity.CreateReply($"You have logged in successfully!");
+                        await connector.Conversations.ReplyToActivityAsync(reply);
+                    }
+                    
+                }
+                else if (userData.GetProperty<bool>("updatinginfo"))
+                {
+
                 }
                 else
                 {
@@ -164,16 +138,16 @@ namespace Contoso_Bot
                     {   
                         if (userData.GetProperty<bool>("loggedin"))
                         {
-                            await Conversation.SendAsync(activity, () => new updateDialog());
+                            userData.SetProperty<bool>("updatinginfo", true);
+                            reply = activity.CreateReply($"Please enter your ");
                         }
                         else
                         {
-                            await Conversation.SendAsync(activity, () => new loginDialog());
-                            userData.SetProperty<bool>("loggedin", true);
-                            await Conversation.SendAsync(activity, () => new updateDialog());
+                            userData.SetProperty<bool>("storeusername", true);
+                            reply = activity.CreateReply($"Please enter your username.");
                         }
                         
-                        reply=activity.CreateReply($"");
+
                     }
 
                     //intent: disablecard

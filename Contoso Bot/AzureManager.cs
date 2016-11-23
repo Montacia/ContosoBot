@@ -41,7 +41,15 @@ namespace Contoso_Bot
         public async Task getuserinfo(contosodb authenticate)
         {            
             List<contosodb> items = await contosodbTable.Where(check => check.username == authenticate.username && check.password == authenticate.password).ToListAsync();
-            authenticate = items[0];
+            if (items.Count() < 1)
+            {
+                authenticate = new contosodb();
+            }
+            else
+            {
+                authenticate = items[0];
+            }
+            
         }
 
         public async Task adduser(contosodb newuser)
