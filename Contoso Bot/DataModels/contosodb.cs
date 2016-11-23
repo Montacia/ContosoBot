@@ -8,7 +8,7 @@ namespace Contoso_Bot.DataModels
 {
     public class contosodb
     {
-        [JsonProperty(PropertyName = "Id")]
+        [JsonProperty(PropertyName = "id")]
         public string ID { get; set; }
 
         [JsonProperty(PropertyName = "createdAt")]

@@ -141,7 +141,8 @@
     <Compile Include="Global.asax.cs">
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>
-    <Compile Include="intent.cs" />
+    <Compile Include="Models\exchangerate.cs" />
+    <Compile Include="Models\intent.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

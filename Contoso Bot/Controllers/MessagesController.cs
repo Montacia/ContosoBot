@@ -10,6 +10,8 @@ using Newtonsoft.Json;
 using Microsoft.WindowsAzure.MobileServices;
 using System.Collections.Generic;
 using Contoso_Bot.DataModels;
+using Contoso_Bot.Models;
+using System.Reflection;
 
 namespace Contoso_Bot
 {
@@ -26,15 +28,20 @@ namespace Contoso_Bot
             {
                 ConnectorClient connector = new ConnectorClient(new Uri(activity.ServiceUrl));
 
-                MobileServiceClient dbclient = AzureManager.AzureManagerInstance.AzureClient;
 
                 StateClient stateClient = activity.GetStateClient();
                 BotData userData = await stateClient.BotState.GetUserDataAsync(activity.ChannelId, activity.From.Id);
 
-                if (activity.Text == "help")
+                if (activity.Text.ToLower() == "help")
                 {
                     Activity reply = activity.CreateReply($"I can tell you about the current exchange rates, accounts, cards, kiwisaver, loans, mortgages and term deposits. \n I can also do this.");
                     await connector.Conversations.ReplyToActivityAsync(reply);
+                }
+                else if (activity.Text.ToLower().Contains("logout"))
+                {
+                    Activity reply = activity.CreateReply($"You have logged out successfully");
+                    await connector.Conversations.ReplyToActivityAsync(reply);
+                    await stateClient.BotState.DeleteStateForUserAsync(activity.ChannelId, activity.From.Id);
                 }
                 else if (userData.GetProperty<bool>("storeusername"))
                 {
@@ -122,6 +129,8 @@ namespace Contoso_Bot
                 }
                 else
                 {
+
+                    MobileServiceClient dbclient = AzureManager.AzureManagerInstance.AzureClient;
                     intent.RootObject rootObject;
                     HttpClient luisclient = new HttpClient();
                     string x = await luisclient.GetStringAsync(new Uri("https://api.projectoxford.ai/luis/v2.0/apps/0bc944f0-ba4d-4c3c-9588-7587eabcd1d8?subscription-key=fe392207fc69410cb8f52911ac8b4599&q=" + activity.Text));
@@ -149,7 +158,25 @@ namespace Contoso_Bot
                         string entity = entities[0].type;
                         if (entity.Contains("exchangerate"))
                         {
-                            reply = activity.CreateReply($"mystomachhurts");
+                            /*string basecurrency = "";
+                            string tocurrency = "";
+                            for (int i = 0; i < entities.Count(); i++)
+                            {
+                                if (entities[i].type == "exchangerate::fromcurrency")
+                                {
+                                    basecurrency = entities[i].entity;
+                                }
+                                if (entities[i].type == "exchangerate::tocurrency")
+                                {
+                                    tocurrency = entities[i].entity;
+                                }
+                            }
+                            exchangerate.RootObject exchangerateObject;
+                            HttpClient exchangerateclient = new HttpClient();
+                            string rate = await exchangerateclient.GetStringAsync(new Uri("http://api.fixer.io/latest?base=" + basecurrency));
+                            exchangerateObject = JsonConvert.DeserializeObject<exchangerate.RootObject>(rate);
+                            var tocurrencyrate = exchangerateObject.rates.GetType().GetProperty(tocurrency).GetValue(exchangerateObject.rates, null);
+                            reply = activity.CreateReply($"The current exchange rate for {basecurrency} to {tocurrency} is {tocurrencyrate}.");*/
                         }
                         if (entity.Contains("accounts"))
                         {
