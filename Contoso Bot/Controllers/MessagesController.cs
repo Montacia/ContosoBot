@@ -8,6 +8,7 @@ using System.Web.Http.Description;
 using Microsoft.Bot.Connector;
 using Newtonsoft.Json;
 using Microsoft.WindowsAzure.MobileServices;
+using System.Collections.Generic;
 
 namespace Contoso_Bot
 {
@@ -29,11 +30,81 @@ namespace Contoso_Bot
                 string x = await luisclient.GetStringAsync(new Uri("https://api.projectoxford.ai/luis/v2.0/apps/0bc944f0-ba4d-4c3c-9588-7587eabcd1d8?subscription-key=fe392207fc69410cb8f52911ac8b4599&q="+ activity.Text));
                 rootObject = JsonConvert.DeserializeObject<intent.RootObject>(x);
                 string intent = rootObject.topScoringIntent.intent;
-                Activity reply = activity.CreateReply($"Sorry, please reword that.");
+                //intent: none
+                Activity reply = activity.CreateReply($"Sorry, I don't understand. Please rephrase or type 'help' to see what I can do for you.");
+
+                //intent: help
+                if (intent == "help")
+                {
+                    
+                }
+
+                //intent: greeting
                 if (intent == "greeting")
                 {
                     reply = activity.CreateReply($"Hello, how may I help you today?");
                 }
+
+                //intent: query
+                if (intent == "query")
+                {
+                    List<intent.Entity> entities = rootObject.entities;
+                    string entity = entities[0].type;
+                    if (entity.Contains("exchangerate"))
+                    {
+                        reply = activity.CreateReply($"mystomachhurts");
+                    }
+                    if (entity.Contains("accounts"))
+                    {
+
+                    }
+                    if (entity.Contains("cards"))
+                    {
+
+                    }
+                    if (entity.Contains("kiwisaver"))
+                    {
+
+                    }
+                    if (entity.Contains("loans"))
+                    {
+
+                    }
+                    if (entity.Contains("mortgages"))
+                    {
+
+                    }
+                    if (entity.Contains("termdeposits"))
+                    {
+
+                    }
+                }
+
+
+                //intent: open
+                if (intent == "open")
+                {
+
+                }
+
+                //intent: updateinfo
+                if (intent == "updateinfo")
+                {
+
+                }
+
+                //intent: disablecard
+                if (intent == "disablecard")
+                {
+
+                }
+
+                //intent: close
+                if (intent == "close")
+                {
+
+                }
+
 
                 await connector.Conversations.ReplyToActivityAsync(reply);
             }
@@ -65,7 +136,7 @@ namespace Contoso_Bot
             }
             else if (message.Type == ActivityTypes.Typing)
             {
-                // Handle knowing tha the user is typing
+                // Handle knowing that the user is typing
             }
             else if (message.Type == ActivityTypes.Ping)
             {
