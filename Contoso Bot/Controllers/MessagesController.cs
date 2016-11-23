@@ -39,12 +39,14 @@ namespace Contoso_Bot
                     userData.SetProperty<string>("username", activity.Text);
                     userData.SetProperty<bool>("storeusername", false);
                     userData.SetProperty<bool>("storepassword", true);
+                    await stateClient.BotState.SetUserDataAsync(activity.ChannelId, activity.From.Id, userData);
                     Activity reply = activity.CreateReply($"Please enter your password.");
                     await connector.Conversations.ReplyToActivityAsync(reply);
                 }
                 else if (userData.GetProperty<bool>("storepassword"))
                 {
                     userData.SetProperty<string>("password", activity.Text);
+                    await stateClient.BotState.SetUserDataAsync(activity.ChannelId, activity.From.Id, userData);
                     contosodb logininfo = new contosodb() {username = userData.GetProperty<string>("username"),
                     password = userData.GetProperty<string>("password")};
                     await AzureManager.AzureManagerInstance.getuserinfo(logininfo);
@@ -52,6 +54,7 @@ namespace Contoso_Bot
                     {
                         userData.SetProperty<bool>("storeusername", true);
                         userData.SetProperty<bool>("storepassword", false);
+                        await stateClient.BotState.SetUserDataAsync(activity.ChannelId, activity.From.Id, userData);
                         Activity reply = activity.CreateReply($"Wrong credentials please try again.");
                         await connector.Conversations.ReplyToActivityAsync(reply);
                     }
@@ -59,6 +62,7 @@ namespace Contoso_Bot
                     {
                         userData.SetProperty<bool>("storepassword", false);
                         userData.SetProperty<bool>("loggedin", true);
+                        await stateClient.BotState.SetUserDataAsync(activity.ChannelId, activity.From.Id, userData);
                         Activity reply = activity.CreateReply($"You have logged in successfully!");
                         await connector.Conversations.ReplyToActivityAsync(reply);
                     }
@@ -139,11 +143,13 @@ namespace Contoso_Bot
                         if (userData.GetProperty<bool>("loggedin"))
                         {
                             userData.SetProperty<bool>("updatinginfo", true);
+                            await stateClient.BotState.SetUserDataAsync(activity.ChannelId, activity.From.Id, userData);
                             reply = activity.CreateReply($"Please enter your ");
                         }
                         else
                         {
                             userData.SetProperty<bool>("storeusername", true);
+                            await stateClient.BotState.SetUserDataAsync(activity.ChannelId, activity.From.Id, userData);
                             reply = activity.CreateReply($"Please enter your username.");
                         }
                         
