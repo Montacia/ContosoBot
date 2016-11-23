@@ -26,6 +26,8 @@ namespace Contoso_Bot
             {
                 ConnectorClient connector = new ConnectorClient(new Uri(activity.ServiceUrl));
 
+                MobileServiceClient dbclient = AzureManager.AzureManagerInstance.AzureClient;
+
                 StateClient stateClient = activity.GetStateClient();
                 BotData userData = await stateClient.BotState.GetUserDataAsync(activity.ChannelId, activity.From.Id);
 
@@ -47,8 +49,11 @@ namespace Contoso_Bot
                 {
                     userData.SetProperty<string>("password", activity.Text);
                     await stateClient.BotState.SetUserDataAsync(activity.ChannelId, activity.From.Id, userData);
-                    contosodb logininfo = new contosodb() {username = userData.GetProperty<string>("username"),
-                    password = userData.GetProperty<string>("password")};
+                    contosodb logininfo = new contosodb()
+                    {
+                        username = userData.GetProperty<string>("username"),
+                        password = userData.GetProperty<string>("password")
+                    };
                     await AzureManager.AzureManagerInstance.getuserinfo(logininfo);
                     if (logininfo.username != userData.GetProperty<string>("username"))
                     {
@@ -60,21 +65,63 @@ namespace Contoso_Bot
                     }
                     else
                     {
+                        userData.SetProperty<contosodb>("userinfo", logininfo);
+                        userData.SetProperty<string>("name", logininfo.name);
                         userData.SetProperty<bool>("storepassword", false);
                         userData.SetProperty<bool>("loggedin", true);
                         await stateClient.BotState.SetUserDataAsync(activity.ChannelId, activity.From.Id, userData);
-                        Activity reply = activity.CreateReply($"You have logged in successfully!");
+                        Activity reply = activity.CreateReply($"Congratulations {userData.GetProperty<string>("name")}, you have logged in successfully!");
                         await connector.Conversations.ReplyToActivityAsync(reply);
+                        if (userData.GetProperty<bool>("updatinginfo"))
+                        {
+                            List<intent.Entity> entities = userData.GetProperty<List<intent.Entity>>("updateinfolist");
+                            if (entities.Count() == 2)
+                            {
+                                string infocategory = entities[0].type.Substring(9);
+                                contosodb edit = userData.GetProperty<contosodb>("userinfo");
+                                bool error = false;
+                                if (infocategory == "address")
+                                {
+                                    edit.address = entities[0].entity;
+                                }
+                                else if (infocategory == "email")
+                                {
+                                    edit.email = entities[0].entity;
+                                }
+                                else if (infocategory == "phone")
+                                {
+                                    edit.phone = entities[0].entity;
+                                }
+                                else if (infocategory == "password")
+                                {
+                                    edit.password = entities[0].entity;
+                                }
+                                else
+                                {
+                                    error = true;
+                                    reply = activity.CreateReply($"Error: infocategory issue please contact dev for bugfix.");
+                                }
+                                if (!error)
+                                {
+                                    await AzureManager.AzureManagerInstance.updateuserinfo(edit);
+                                    userData.SetProperty<contosodb>("userinfo", edit);
+                                    userData.SetProperty<bool>("updatinginfo", false);
+                                    await stateClient.BotState.SetUserDataAsync(activity.ChannelId, activity.From.Id, userData);
+                                    reply = activity.CreateReply($"Your {entities[1].entity} has been successfully changed to {entities[0].entity}!");
+                                }
+                            }
+                            else
+                            {
+                                string detail = entities[0].entity;
+                                reply = activity.CreateReply($"Please include your new {detail} in your request. i.e. I want to change my {detail} to [new {detail}]");
+                            }
+                            await connector.Conversations.ReplyToActivityAsync(reply);
+                        }
                     }
-                    
-                }
-                else if (userData.GetProperty<bool>("updatinginfo"))
-                {
 
                 }
                 else
                 {
-                    MobileServiceClient dbclient = AzureManager.AzureManagerInstance.AzureClient;
                     intent.RootObject rootObject;
                     HttpClient luisclient = new HttpClient();
                     string x = await luisclient.GetStringAsync(new Uri("https://api.projectoxford.ai/luis/v2.0/apps/0bc944f0-ba4d-4c3c-9588-7587eabcd1d8?subscription-key=fe392207fc69410cb8f52911ac8b4599&q=" + activity.Text));
@@ -139,10 +186,72 @@ namespace Contoso_Bot
 
                     //intent: updateinfo
                     if (intent == "updateinfo")
-                    {   
+                    {
                         if (userData.GetProperty<bool>("loggedin"))
                         {
+                            List<intent.Entity> entities = rootObject.entities;
+                            if (entities.Count() == 2)
+                            {
+                                string infocategory = entities[0].type.Substring(9);
+                                contosodb edit = userData.GetProperty<contosodb>("userinfo");
+                                bool error = false;
+                                if (infocategory == "address")
+                                {
+                                    edit.address = entities[0].entity;
+                                }
+                                else if (infocategory == "email")
+                                {
+                                    edit.email = entities[0].entity;
+                                }
+                                else if (infocategory == "phone")
+                                {
+                                    edit.phone = entities[0].entity;
+                                }
+                                else if (infocategory == "password")
+                                {
+                                    edit.password = entities[0].entity;
+                                }
+                                else
+                                {
+                                    error = true;
+                                    reply = activity.CreateReply($"Error: infocategory issue please contact dev for bugfix.");
+                                }
+                                if (!error)
+                                {
+                                    await AzureManager.AzureManagerInstance.updateuserinfo(edit);
+                                    userData.SetProperty<contosodb>("userinfo", edit);
+                                    userData.SetProperty<bool>("updatinginfo", false);
+                                    await stateClient.BotState.SetUserDataAsync(activity.ChannelId, activity.From.Id, userData);
+                                    reply = activity.CreateReply($"Your {entities[1].entity} has been successfully changed to {entities[0].entity}!");
+                                }
+                            }
+                            else
+                            {   
+                                string detail = entities[0].entity;
+                                reply = activity.CreateReply($"Please include your new {detail} in your request. i.e. I want to change my {detail} to [new {detail}]");
+
+                            }
+
+                        }
+                        else
+                        {
                             userData.SetProperty<bool>("updatinginfo", true);
+                            List<intent.Entity> entities = rootObject.entities;
+                            userData.SetProperty<List<intent.Entity>>("updateinfolist", entities);
+                            userData.SetProperty<bool>("storeusername", true);
+                            await stateClient.BotState.SetUserDataAsync(activity.ChannelId, activity.From.Id, userData);
+                            reply = activity.CreateReply($"Please enter your username.");
+                        }
+
+
+                    }
+
+                    //intent: disablecard
+                    if (intent == "disablecard")
+                    {
+                        if (userData.GetProperty<bool>("loggedin"))
+                        {
+                            userData.SetProperty<bool>("disablingcard", true);
                             await stateClient.BotState.SetUserDataAsync(activity.ChannelId, activity.From.Id, userData);
                             reply = activity.CreateReply($"Please enter your ");
                         }
@@ -152,20 +261,23 @@ namespace Contoso_Bot
                             await stateClient.BotState.SetUserDataAsync(activity.ChannelId, activity.From.Id, userData);
                             reply = activity.CreateReply($"Please enter your username.");
                         }
-                        
-
-                    }
-
-                    //intent: disablecard
-                    if (intent == "disablecard")
-                    {
-
                     }
 
                     //intent: close
                     if (intent == "close")
                     {
-
+                        if (userData.GetProperty<bool>("loggedin"))
+                        {
+                            userData.SetProperty<bool>("closing", true);
+                            await stateClient.BotState.SetUserDataAsync(activity.ChannelId, activity.From.Id, userData);
+                            reply = activity.CreateReply($"Please enter your ");
+                        }
+                        else
+                        {
+                            userData.SetProperty<bool>("storeusername", true);
+                            await stateClient.BotState.SetUserDataAsync(activity.ChannelId, activity.From.Id, userData);
+                            reply = activity.CreateReply($"Please enter your username.");
+                        }
                     }
 
 
