@@ -16,7 +16,7 @@ namespace Contoso_Bot
 
         private AzureManager()
         {
-            this.client = new MobileServiceClient("https://buticantusexamarin.azurewebsites.net/");
+            this.client = new MobileServiceClient("http://buticantusexamarin.azurewebsites.net");
             this.contosodbTable = this.client.GetTable<contosodb>();
         }
 

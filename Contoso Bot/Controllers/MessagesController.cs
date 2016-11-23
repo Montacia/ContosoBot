@@ -28,7 +28,6 @@ namespace Contoso_Bot
             {
                 ConnectorClient connector = new ConnectorClient(new Uri(activity.ServiceUrl));
 
-
                 StateClient stateClient = activity.GetStateClient();
                 BotData userData = await stateClient.BotState.GetUserDataAsync(activity.ChannelId, activity.From.Id);
 
@@ -39,9 +38,9 @@ namespace Contoso_Bot
                 }
                 else if (activity.Text.ToLower().Contains("logout"))
                 {
+                    await stateClient.BotState.DeleteStateForUserAsync(activity.ChannelId, activity.From.Id);
                     Activity reply = activity.CreateReply($"You have logged out successfully");
                     await connector.Conversations.ReplyToActivityAsync(reply);
-                    await stateClient.BotState.DeleteStateForUserAsync(activity.ChannelId, activity.From.Id);
                 }
                 else if (userData.GetProperty<bool>("storeusername"))
                 {
