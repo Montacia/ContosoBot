@@ -37,6 +37,8 @@ namespace Contoso_Bot
             }
         }
 
+        public Task MobileService { get; private set; }
+
         public async Task<contosodb> getuserinfo(contosodb authenticate)
         {
             string salt = await retrsalt(authenticate.username);
@@ -88,16 +90,22 @@ namespace Contoso_Bot
 
         public async Task updateuserinfo(contosodb newinfo)
         {
+
             contosodb edittable = new contosodb()
             {
-                ID = newinfo.ID,
-                address = newinfo.address,
-                phone = newinfo.phone,
-                email = newinfo.email,
+                Id = newinfo.Id,
                 password = newinfo.password,
+                email = newinfo.email,
+                phone = newinfo.phone,
+                address = newinfo.address,
                 account = newinfo.account
             };
             await this.contosodbTable.UpdateAsync(edittable);
         }
+        public async Task deleteuserinfo(contosodb newinfo)
+        {
+            await this.contosodbTable.DeleteAsync(newinfo);
+        }
+	
     }
 }

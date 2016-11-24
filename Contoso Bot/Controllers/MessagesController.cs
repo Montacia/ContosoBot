@@ -164,7 +164,7 @@ namespace Contoso_Bot
                         userData.SetProperty<bool>("signupconf", false);
                         userData.SetProperty<bool>("opennewaccount", true);
                         await stateClient.BotState.SetUserDataAsync(activity.ChannelId, activity.From.Id, userData);
-                        Activity reply = activity.CreateReply($"Thank you for choosing Contoso Bank. \n\nI will now begin filling your application form by asking you a series of questions. \n\n*Please remember you may type _'cancel'_ at any stage should you change your mind.* \n\nTo begin, what kind of account are you looking to apply for?");
+                        Activity reply = activity.CreateReply($"Thank you for choosing Contoso Bank. \n\nI will now begin filling your application form by asking you a series of questions. \n\n*Please remember you may type _'cancel'_ at any stage should you change your mind.* \n\nTo begin, do you know which type of account you want to apply for?");
                         await connector.Conversations.ReplyToActivityAsync(reply);
 
                     }
@@ -187,11 +187,113 @@ namespace Contoso_Bot
                 //Choosing Account Type
                 else if (userData.GetProperty<bool>("register1"))
                 {
-                    userData.SetProperty<bool>("register1", false);
-                    userData.SetProperty<bool>("register2", true);
-                    await stateClient.BotState.SetUserDataAsync(activity.ChannelId, activity.From.Id, userData);
-                    Activity reply = activity.CreateReply($"May I please have your name?");
-                    await connector.Conversations.ReplyToActivityAsync(reply);
+                    if (activity.Text.ToLower() == "no" || activity.Text.ToLower() == "nah" || activity.Text.ToLower() == "nope" || activity.Text.ToLower() == "i don't know")
+                    {
+                        userData.SetProperty<bool>("register1", false);
+                        userData.SetProperty<bool>("register1.5", true);
+                        await stateClient.BotState.SetUserDataAsync(activity.ChannelId, activity.From.Id, userData);
+                        Activity replyToConversation = activity.CreateReply();
+                        replyToConversation.Recipient = activity.From;
+                        replyToConversation.Type = "message";
+                        replyToConversation.Attachments = new List<Attachment>();
+                        replyToConversation.AttachmentLayout = "carousel";
+                        //first card
+                        List<CardImage> cardImages = new List<CardImage>();
+                        cardImages.Add(new CardImage(url: "https://cdn2.iconfinder.com/data/icons/ios-7-style-metro-ui-icons/512/MetroUI_iCloud.png"));
+                        List<CardAction> cardButtons = new List<CardAction>();
+                        CardAction plButton = new CardAction()
+                        {
+                            Value = "http://Contoso.com",
+                            Type = "openUrl",
+                            Title = "More Details"
+                        };
+                        cardButtons.Add(plButton);
+                        CardAction pickButton = new CardAction()
+                        {
+                            Value = "Simple Banking Account",
+                            Type = "imBack",
+                            Title = "Select"
+                        };
+                        cardButtons.Add(pickButton);
+                        ThumbnailCard plCard = new ThumbnailCard()
+                        {
+                            Title = "Contoso Simple Banking Account",
+                            Subtitle = "This is a transactional account with the lowest fees guaranteed.",
+                            Images = cardImages,
+                            Buttons = cardButtons
+                        };
+                        Attachment plAttachment = plCard.ToAttachment();
+                        replyToConversation.Attachments.Add(plAttachment);
+                        //Second card
+                        List<CardImage> cardImages2 = new List<CardImage>();
+                        cardImages2.Add(new CardImage(url: "https://cdn2.iconfinder.com/data/icons/ios-7-style-metro-ui-icons/512/MetroUI_iCloud.png"));
+                        List<CardAction> cardButtons2 = new List<CardAction>();
+                        CardAction plButton2 = new CardAction()
+                        {
+                            Value = "http://Contoso.com",
+                            Type = "openUrl",
+                            Title = "More Details"
+                        };
+                        cardButtons2.Add(plButton);
+                        CardAction pickButton2 = new CardAction()
+                        {
+                            Value = "Simple Saving Account",
+                            Type = "imBack",
+                            Title = "Select"
+                        };
+                        cardButtons2.Add(pickButton2);
+                        ThumbnailCard plCard2 = new ThumbnailCard()
+                        {
+                            Title = "Contoso Simple Saving Account",
+                            Subtitle = "This savings account provides great interest for your savings!",
+                            Images = cardImages2,
+                            Buttons = cardButtons2
+                        };
+                        Attachment plAttachment2 = plCard2.ToAttachment();
+                        replyToConversation.Attachments.Add(plAttachment2);
+                        await connector.Conversations.SendToConversationAsync(replyToConversation);
+                    }
+                    else if (activity.Text.ToLower() == "yes" || activity.Text.ToLower() == "yeah" || activity.Text.ToLower() == "yup")
+                    {
+                        userData.SetProperty<bool>("register1", false);
+                        userData.SetProperty<bool>("register1.5", true);
+                        await stateClient.BotState.SetUserDataAsync(activity.ChannelId, activity.From.Id, userData);
+                        Activity reply = activity.CreateReply($"Please enter the name of your desired account type.");
+                        await connector.Conversations.ReplyToActivityAsync(reply);
+                    }
+                    else if (activity.Text.ToLower().Contains("savings") ^ activity.Text.ToLower().Contains("savings"))
+                    {
+                        userData.SetProperty<string>("account", string.Concat(activity.Text));
+                        userData.SetProperty<bool>("register1", false);
+                        userData.SetProperty<bool>("register2", true);
+                        await stateClient.BotState.SetUserDataAsync(activity.ChannelId, activity.From.Id, userData);
+                        Activity reply = activity.CreateReply($"May I please have your name?");
+                        await connector.Conversations.ReplyToActivityAsync(reply);
+                    }
+                    else
+                    {
+                        Activity reply = activity.CreateReply($"Sorry I didn't understand that, please tell me 'no' if you don't know which account type, or type in the account name if you do.");
+                        await connector.Conversations.ReplyToActivityAsync(reply);
+                    }
+
+                }
+                //Account type second stage
+                else if (userData.GetProperty<bool>("register1.5"))
+                {
+                    if (activity.Text.ToLower().Contains("saving") ^ activity.Text.ToLower().Contains("banking"))
+                    {
+                        userData.SetProperty<string>("account", string.Concat(activity.Text.ToLower() + ", (0)"));
+                        userData.SetProperty<bool>("register1.5", false);
+                        userData.SetProperty<bool>("register2", true);
+                        await stateClient.BotState.SetUserDataAsync(activity.ChannelId, activity.From.Id, userData);
+                        Activity reply = activity.CreateReply($"May I please have your name?");
+                        await connector.Conversations.ReplyToActivityAsync(reply);
+                    }
+                    else
+                    {
+                        Activity reply = activity.CreateReply($"Sorry I didn't understand that, please choose between either banking or saving.");
+                        await connector.Conversations.ReplyToActivityAsync(reply);
+                    }
                 }
 
                 //Acquiring name *NEED TO ADD REGISTER1 
