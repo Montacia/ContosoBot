@@ -88,7 +88,16 @@ namespace Contoso_Bot
 
         public async Task updateuserinfo(contosodb newinfo)
         {
-            await this.contosodbTable.UpdateAsync(newinfo);
+            contosodb edittable = new contosodb()
+            {
+                ID = newinfo.ID,
+                address = newinfo.address,
+                phone = newinfo.phone,
+                email = newinfo.email,
+                password = newinfo.password,
+                account = newinfo.account
+            };
+            await this.contosodbTable.UpdateAsync(edittable);
         }
     }
 }

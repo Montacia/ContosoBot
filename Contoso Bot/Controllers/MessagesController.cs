@@ -105,7 +105,7 @@ namespace Contoso_Bot
                         userData.SetProperty<bool>("loggedin", true);
                         await stateClient.BotState.SetUserDataAsync(activity.ChannelId, activity.From.Id, userData);
                         Activity reply = activity.CreateReply($"Congratulations {userData.GetProperty<string>("name")}, you have logged in successfully!");
-                        await connector.Conversations.ReplyToActivityAsync(reply);
+                        await connector.Conversations.SendToConversationAsync(reply);
                         //continue updateinfo dialog
                         if (userData.GetProperty<bool>("updatinginfo"))
                         {
@@ -262,9 +262,12 @@ namespace Contoso_Bot
                         account = userData.GetProperty<string>("account")
                     };
                     await AzureManager.AzureManagerInstance.adduser(newentry);
+                    contosodb updated = await AzureManager.AzureManagerInstance.getuserinfo(newentry);
                     userData.SetProperty<bool>("register6", false);
+                    userData.SetProperty<bool>("loggedin", true);
+                    userData.SetProperty<contosodb>("userinfo", updated);
                     await stateClient.BotState.SetUserDataAsync(activity.ChannelId, activity.From.Id, userData);
-                    Activity reply = activity.CreateReply($"Congratulations, your account has been set up! Your unique user ID is {username}! Please make sure you keep the number safe.");
+                    Activity reply = activity.CreateReply($"Congratulations, your account has been set up! Your unique user ID is {username}, you'll need it to log in to your account so please make sure you remember it.");
                     await connector.Conversations.ReplyToActivityAsync(reply);
                 }
 
