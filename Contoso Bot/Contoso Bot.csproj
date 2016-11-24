@@ -136,6 +136,7 @@
   <ItemGroup>
     <Compile Include="App_Start\WebApiConfig.cs" />
     <Compile Include="AzureManager.cs" />
+    <Compile Include="security.cs" />
     <Compile Include="Controllers\MessagesController.cs" />
     <Compile Include="DataModels\contosodb.cs" />
     <Compile Include="Global.asax.cs">

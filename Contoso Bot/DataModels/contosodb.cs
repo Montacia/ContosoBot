@@ -35,6 +35,7 @@ namespace Contoso_Bot.DataModels
         [JsonProperty(PropertyName = "address")]
         public string address { get; set; }
 
-
+        [JsonProperty(PropertyName = "account")]
+        public string account { get; set; }
     }
 }

@@ -38,24 +38,34 @@ namespace Contoso_Bot
         }
 
         public async Task<contosodb> getuserinfo(contosodb authenticate)
-        {            
-            List<contosodb> items = await contosodbTable.Where(check => check.username == authenticate.username && check.password == authenticate.password).ToListAsync();
-            if (items.Count() < 1)
+        {
+            string salt = await retrsalt(authenticate.username);
+            string hash = await retrhash(authenticate.username);
+            bool authentic = security.verifyhash(authenticate.password, salt, hash);
+            if (authentic)
             {
-                authenticate = new contosodb();
+                List<contosodb> items = await contosodbTable.Where(check => check.username == authenticate.username).ToListAsync();
+                authenticate = items.ElementAt(0);
             }
             else
             {
-                authenticate = items.ElementAt(0);
+                authenticate = new contosodb();
             }
             return authenticate;
-            
-        }
 
-        //public async Task verifypassword (contosodb authenicate)
-        //{
-        //
-        //}
+        }
+        public async Task<string> retrhash(string username)
+        {
+            List<contosodb> user = await contosodbTable.Where(check => check.username == username).ToListAsync();
+            string hash = user[0].password;
+            return hash;
+        }
+        public async Task<string> retrsalt(string username)
+        {
+            List<contosodb> user = await contosodbTable.Where(check => check.username == username).ToListAsync();
+            string salt = user[0].salt;
+            return salt;
+        }
 
         public async Task<string> uniqueusernamegenerate(string username)
         {   
@@ -63,12 +73,7 @@ namespace Contoso_Bot
             List<contosodb> existinguser = await contosodbTable.Where(check => check.username == username).ToListAsync();
             while (existinguser.Count()>0)
             {
-                Random rng = new Random();
-                string newname = "";                    
-                for (int i = 0; i < 8; i++) {
-                    newname = string.Concat(newname + rng.Next(0, 10).ToString());
-                };
-                username = newname;
+                username = security.genuser();
                 existinguser = await contosodbTable.Where(check => check.username == username).ToListAsync();
             }
 

@@ -59,24 +59,24 @@ namespace Contoso_Bot
 
                 }
                 //logout (userdatawipe)
-                else if (activity.Text.ToLower().Contains("logout"))
+                else if (activity.Text.ToLower() =="logout" || activity.Text.ToLower() == "log out")
                 {
                     await stateClient.BotState.DeleteStateForUserAsync(activity.ChannelId, activity.From.Id);
                     Activity reply = activity.CreateReply($"You have logged out successfully.");
                     await connector.Conversations.ReplyToActivityAsync(reply);
                 }
                 //Acquire Username (login step 1)
-                else if (userData.GetProperty<bool>("storeusername"))
+                else if (userData.GetProperty<bool>("takeusername"))
                 {
                     userData.SetProperty<string>("username", activity.Text);
-                    userData.SetProperty<bool>("storeusername", false);
-                    userData.SetProperty<bool>("storepassword", true);
+                    userData.SetProperty<bool>("takeusername", false);
+                    userData.SetProperty<bool>("takepassword", true);
                     await stateClient.BotState.SetUserDataAsync(activity.ChannelId, activity.From.Id, userData);
                     Activity reply = activity.CreateReply($"Please enter your password.");
                     await connector.Conversations.ReplyToActivityAsync(reply);
                 }
                 //Acquire Password (login step2)
-                else if (userData.GetProperty<bool>("storepassword"))
+                else if (userData.GetProperty<bool>("takepassword"))
                 {
                     userData.SetProperty<string>("password", activity.Text);
                     await stateClient.BotState.SetUserDataAsync(activity.ChannelId, activity.From.Id, userData);
@@ -89,8 +89,8 @@ namespace Contoso_Bot
 
                     if (logininfo.username != userData.GetProperty<string>("username"))
                     {
-                        userData.SetProperty<bool>("storeusername", true);
-                        userData.SetProperty<bool>("storepassword", false);
+                        userData.SetProperty<bool>("takeusername", true);
+                        userData.SetProperty<bool>("takepassword", false);
                         await stateClient.BotState.SetUserDataAsync(activity.ChannelId, activity.From.Id, userData);
                         Activity reply = activity.CreateReply($"Wrong credentials please try again.");
                         await connector.Conversations.ReplyToActivityAsync(reply);
@@ -101,7 +101,7 @@ namespace Contoso_Bot
                         userData.SetProperty<string>("name", logininfo.name);
                         userData.SetProperty<string>("username", "");
                         userData.SetProperty<string>("password", "");
-                        userData.SetProperty<bool>("storepassword", false);
+                        userData.SetProperty<bool>("takepassword", false);
                         userData.SetProperty<bool>("loggedin", true);
                         await stateClient.BotState.SetUserDataAsync(activity.ChannelId, activity.From.Id, userData);
                         Activity reply = activity.CreateReply($"Congratulations {userData.GetProperty<string>("name")}, you have logged in successfully!");
@@ -164,7 +164,7 @@ namespace Contoso_Bot
                         userData.SetProperty<bool>("signupconf", false);
                         userData.SetProperty<bool>("opennewaccount", true);
                         await stateClient.BotState.SetUserDataAsync(activity.ChannelId, activity.From.Id, userData);
-                        Activity reply = activity.CreateReply($"Thank you for choosing Contoso Bank. \n\nI will now begin filling your application form by asking you a series of questions. \n*Please remember you may type 'cancel' at any stage should you change your mind.* \n\nTo begin, may I have your full name please?");
+                        Activity reply = activity.CreateReply($"Thank you for choosing Contoso Bank. \n\nI will now begin filling your application form by asking you a series of questions. \n\n*Please remember you may type _'cancel'_ at any stage should you change your mind.* \n\nTo begin, what kind of account are you looking to apply for?");
                         await connector.Conversations.ReplyToActivityAsync(reply);
 
                     }
@@ -184,6 +184,16 @@ namespace Contoso_Bot
                         await connector.Conversations.ReplyToActivityAsync(reply);
                     }
                 }
+                //Choosing Account Type
+                else if (userData.GetProperty<bool>("register1"))
+                {
+                    userData.SetProperty<bool>("register1", false);
+                    userData.SetProperty<bool>("register2", true);
+                    await stateClient.BotState.SetUserDataAsync(activity.ChannelId, activity.From.Id, userData);
+                    Activity reply = activity.CreateReply($"May I please have your name?");
+                    await connector.Conversations.ReplyToActivityAsync(reply);
+                }
+
                 //Acquiring name *NEED TO ADD REGISTER1 
                 else if (userData.GetProperty<bool>("register2"))
                 {
@@ -232,16 +242,27 @@ namespace Contoso_Bot
                     string password = activity.Text;
 
                     //USERNAME GENERATION
-                    string username = "";
-                    Random rng = new Random();
-                    for (int i = 0; i < 8; i++)
-                    {
-                        username = string.Concat(username + rng.Next(0, 10).ToString());
-                    };
+                    string username = security.genuser();
                     username = await AzureManager.AzureManagerInstance.uniqueusernamegenerate(username);
                     //SALT GENERATION
+                    string salt = security.gensalt();
+                    //HASH GENERATION
+                    string hash = security.genhash(password, salt);
 
-                    userData.SetProperty<bool>("register5", false);
+                    //dataentry
+                    contosodb newentry = new contosodb()
+                    {
+                        username = username,
+                        password = hash,
+                        salt = salt,
+                        name = userData.GetProperty<string>("name"),
+                        phone = userData.GetProperty<string>("phonenum"),
+                        email = userData.GetProperty<string>("email"),
+                        address = userData.GetProperty<string>("address"),
+                        account = userData.GetProperty<string>("account")
+                    };
+                    await AzureManager.AzureManagerInstance.adduser(newentry);
+                    userData.SetProperty<bool>("register6", false);
                     await stateClient.BotState.SetUserDataAsync(activity.ChannelId, activity.From.Id, userData);
                     Activity reply = activity.CreateReply($"Congratulations, your account has been set up! Your unique user ID is {username}! Please make sure you keep the number safe.");
                     await connector.Conversations.ReplyToActivityAsync(reply);
@@ -394,7 +415,7 @@ namespace Contoso_Bot
                             userData.SetProperty<bool>("updatinginfo", true);
                             List<intent.Entity> entities = rootObject.entities;
                             userData.SetProperty<List<intent.Entity>>("updateinfolist", entities);
-                            userData.SetProperty<bool>("storeusername", true);
+                            userData.SetProperty<bool>("takeusername", true);
                             await stateClient.BotState.SetUserDataAsync(activity.ChannelId, activity.From.Id, userData);
                             reply = activity.CreateReply($"Please enter your username.");
                         }
