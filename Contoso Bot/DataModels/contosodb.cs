@@ -20,6 +20,9 @@ namespace Contoso_Bot.DataModels
         [JsonProperty(PropertyName = "pass")]
         public string password { get; set; }
 
+        [JsonProperty(PropertyName = "salt")]
+        public string salt { get; set; }
+
         [JsonProperty(PropertyName = "name")]
         public string name { get; set; }
 

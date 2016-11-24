@@ -8,10 +8,13 @@ using System.Web.Http.Description;
 using Microsoft.Bot.Connector;
 using Newtonsoft.Json;
 using Microsoft.WindowsAzure.MobileServices;
+using System.Globalization;
 using System.Collections.Generic;
 using Contoso_Bot.DataModels;
 using Contoso_Bot.Models;
 using System.Reflection;
+using System.Threading;
+using System.Security.Cryptography;
 
 namespace Contoso_Bot
 {
@@ -30,18 +33,39 @@ namespace Contoso_Bot
 
                 StateClient stateClient = activity.GetStateClient();
                 BotData userData = await stateClient.BotState.GetUserDataAsync(activity.ChannelId, activity.From.Id);
-
+                //generalhelp
                 if (activity.Text.ToLower() == "help")
                 {
                     Activity reply = activity.CreateReply($"I can tell you about the current exchange rates, accounts, cards, kiwisaver, loans, mortgages and term deposits. \n I can also do this.");
                     await connector.Conversations.ReplyToActivityAsync(reply);
                 }
+                //cancelapplicationreset *editrequired
+                else if (activity.Text.ToLower() == "cancel")
+                {
+                    if (!userData.GetProperty<bool>("loggedin"))
+                    {
+                        await stateClient.BotState.DeleteStateForUserAsync(activity.ChannelId, activity.From.Id);
+                    }
+                    else
+                    {
+                        contosodb tempstore = userData.GetProperty<contosodb>("userinfo");
+                        await stateClient.BotState.DeleteStateForUserAsync(activity.ChannelId, activity.From.Id);
+                        userData.SetProperty<contosodb>("userinfo", tempstore);
+                        userData.SetProperty<bool>("loggedin", true);
+                        await stateClient.BotState.SetUserDataAsync(activity.ChannelId, activity.From.Id, userData);
+                    }
+                    Activity reply = activity.CreateReply($"Application Cancelled.");
+                    await connector.Conversations.ReplyToActivityAsync(reply);
+
+                }
+                //logout (userdatawipe)
                 else if (activity.Text.ToLower().Contains("logout"))
                 {
                     await stateClient.BotState.DeleteStateForUserAsync(activity.ChannelId, activity.From.Id);
-                    Activity reply = activity.CreateReply($"You have logged out successfully");
+                    Activity reply = activity.CreateReply($"You have logged out successfully.");
                     await connector.Conversations.ReplyToActivityAsync(reply);
                 }
+                //Acquire Username (login step 1)
                 else if (userData.GetProperty<bool>("storeusername"))
                 {
                     userData.SetProperty<string>("username", activity.Text);
@@ -51,6 +75,7 @@ namespace Contoso_Bot
                     Activity reply = activity.CreateReply($"Please enter your password.");
                     await connector.Conversations.ReplyToActivityAsync(reply);
                 }
+                //Acquire Password (login step2)
                 else if (userData.GetProperty<bool>("storepassword"))
                 {
                     userData.SetProperty<string>("password", activity.Text);
@@ -60,7 +85,8 @@ namespace Contoso_Bot
                         username = userData.GetProperty<string>("username"),
                         password = userData.GetProperty<string>("password")
                     };
-                    await AzureManager.AzureManagerInstance.getuserinfo(logininfo);
+                    logininfo = await AzureManager.AzureManagerInstance.getuserinfo(logininfo);
+
                     if (logininfo.username != userData.GetProperty<string>("username"))
                     {
                         userData.SetProperty<bool>("storeusername", true);
@@ -73,11 +99,14 @@ namespace Contoso_Bot
                     {
                         userData.SetProperty<contosodb>("userinfo", logininfo);
                         userData.SetProperty<string>("name", logininfo.name);
+                        userData.SetProperty<string>("username", "");
+                        userData.SetProperty<string>("password", "");
                         userData.SetProperty<bool>("storepassword", false);
                         userData.SetProperty<bool>("loggedin", true);
                         await stateClient.BotState.SetUserDataAsync(activity.ChannelId, activity.From.Id, userData);
                         Activity reply = activity.CreateReply($"Congratulations {userData.GetProperty<string>("name")}, you have logged in successfully!");
                         await connector.Conversations.ReplyToActivityAsync(reply);
+                        //continue updateinfo dialog
                         if (userData.GetProperty<bool>("updatinginfo"))
                         {
                             List<intent.Entity> entities = userData.GetProperty<List<intent.Entity>>("updateinfolist");
@@ -126,6 +155,98 @@ namespace Contoso_Bot
                     }
 
                 }
+                //new user confirmation
+                else if (userData.GetProperty<bool>("signupconf"))
+                {
+                    if (activity.Text.ToLower() == "yes" || activity.Text.ToLower() == "yeah" || activity.Text.ToLower() == "yup")
+                    {
+                        userData.SetProperty<bool>("register1", true);
+                        userData.SetProperty<bool>("signupconf", false);
+                        userData.SetProperty<bool>("opennewaccount", true);
+                        await stateClient.BotState.SetUserDataAsync(activity.ChannelId, activity.From.Id, userData);
+                        Activity reply = activity.CreateReply($"Thank you for choosing Contoso Bank. \n\nI will now begin filling your application form by asking you a series of questions. \n*Please remember you may type 'cancel' at any stage should you change your mind.* \n\nTo begin, may I have your full name please?");
+                        await connector.Conversations.ReplyToActivityAsync(reply);
+
+                    }
+                    else if (activity.Text.ToLower() == "no" || activity.Text.ToLower() == "nah" || activity.Text.ToLower() == "nope")
+                    {
+                        userData.SetProperty<bool>("signupconf", false);
+                        userData.SetProperty<bool>("storeusername", true);
+                        userData.SetProperty<bool>("opennewaccount", true);
+
+                        await stateClient.BotState.SetUserDataAsync(activity.ChannelId, activity.From.Id, userData);
+                        Activity reply = activity.CreateReply($"Then please provide your username.");
+                        await connector.Conversations.ReplyToActivityAsync(reply);
+                    }
+                    else
+                    {
+                        Activity reply = activity.CreateReply($"Sorry I didn't understand that. Valid Answers are yes or no.");
+                        await connector.Conversations.ReplyToActivityAsync(reply);
+                    }
+                }
+                //Acquiring name *NEED TO ADD REGISTER1 
+                else if (userData.GetProperty<bool>("register2"))
+                {
+                    CultureInfo cultureInfo = Thread.CurrentThread.CurrentCulture;
+                    TextInfo textInfo = cultureInfo.TextInfo;
+                    userData.SetProperty<string>("name", textInfo.ToTitleCase(activity.Text));
+                    userData.SetProperty<bool>("register2", false);
+                    userData.SetProperty<bool>("register3", true);
+                    await stateClient.BotState.SetUserDataAsync(activity.ChannelId, activity.From.Id, userData);
+                    Activity reply = activity.CreateReply($"Thank you, {userData.GetProperty<string>("name")}. Now please type in your contact phone number.");
+                    await connector.Conversations.ReplyToActivityAsync(reply);
+                }
+                //Acquiring phone
+                else if (userData.GetProperty<bool>("register3"))
+                {
+                    userData.SetProperty<string>("phonenum", activity.Text);
+                    userData.SetProperty<bool>("register3", false);
+                    userData.SetProperty<bool>("register4", true);
+                    await stateClient.BotState.SetUserDataAsync(activity.ChannelId, activity.From.Id, userData);
+                    Activity reply = activity.CreateReply($"Your current address in the format of street, suburb, town is?");
+                    await connector.Conversations.ReplyToActivityAsync(reply);
+                }
+                //Acquiring address
+                else if (userData.GetProperty<bool>("register4"))
+                {
+                    userData.SetProperty<string>("address", activity.Text);
+                    userData.SetProperty<bool>("register4", false);
+                    userData.SetProperty<bool>("register5", true);
+                    await stateClient.BotState.SetUserDataAsync(activity.ChannelId, activity.From.Id, userData);
+                    Activity reply = activity.CreateReply($"Next I'll need your email address please.");
+                    await connector.Conversations.ReplyToActivityAsync(reply);
+                }
+                //Acquiring email
+                else if (userData.GetProperty<bool>("register5"))
+                {
+                    userData.SetProperty<string>("email", activity.Text);
+                    userData.SetProperty<bool>("register5", false);
+                    userData.SetProperty<bool>("register6", true);
+                    await stateClient.BotState.SetUserDataAsync(activity.ChannelId, activity.From.Id, userData);
+                    Activity reply = activity.CreateReply($"Lastly, please choose a password.");
+                    await connector.Conversations.ReplyToActivityAsync(reply);
+                }
+                //Acquiring password + proccessing form
+                else if (userData.GetProperty<bool>("register6"))
+                {
+                    string password = activity.Text;
+
+                    //USERNAME GENERATION
+                    string username = "";
+                    Random rng = new Random();
+                    for (int i = 0; i < 8; i++)
+                    {
+                        username = string.Concat(username + rng.Next(0, 10).ToString());
+                    };
+                    username = await AzureManager.AzureManagerInstance.uniqueusernamegenerate(username);
+                    //SALT GENERATION
+
+                    userData.SetProperty<bool>("register5", false);
+                    await stateClient.BotState.SetUserDataAsync(activity.ChannelId, activity.From.Id, userData);
+                    Activity reply = activity.CreateReply($"Congratulations, your account has been set up! Your unique user ID is {username}! Please make sure you keep the number safe.");
+                    await connector.Conversations.ReplyToActivityAsync(reply);
+                }
+
                 else
                 {
 
@@ -207,7 +328,16 @@ namespace Contoso_Bot
                     //intent: open
                     if (intent == "open")
                     {
-
+                        List<intent.Entity> entities = rootObject.entities;
+                        if (entities[0].type == "account")
+                        {
+                            if (!userData.GetProperty<bool>("loggedin"))
+                            {
+                                userData.SetProperty<bool>("signupconf", true);
+                                await stateClient.BotState.SetUserDataAsync(activity.ChannelId, activity.From.Id, userData);
+                                reply = activity.CreateReply($"Is this your first account with Contoso?");
+                            }
+                        }
                     }
 
                     //intent: updateinfo
@@ -252,7 +382,7 @@ namespace Contoso_Bot
                                 }
                             }
                             else
-                            {   
+                            {
                                 string detail = entities[0].entity;
                                 reply = activity.CreateReply($"Please include your new {detail} in your request. i.e. I want to change my {detail} to [new {detail}]");
 
