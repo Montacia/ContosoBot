@@ -38,6 +38,7 @@ namespace Contoso_Bot.Models
             public double SGD { get; set; }
             public double THB { get; set; }
             public double TRY { get; set; }
+            public double USD { get; set; }
             public double ZAR { get; set; }
             public double EUR { get; set; }
         }

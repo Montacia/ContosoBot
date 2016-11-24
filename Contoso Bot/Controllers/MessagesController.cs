@@ -302,7 +302,7 @@ namespace Contoso_Bot
                         string entity = entities[0].type;
                         if (entity.Contains("exchangerate"))
                         {
-                            /*string basecurrency = "";
+                            string basecurrency = "";
                             string tocurrency = "";
                             for (int i = 0; i < entities.Count(); i++)
                             {
@@ -319,8 +319,17 @@ namespace Contoso_Bot
                             HttpClient exchangerateclient = new HttpClient();
                             string rate = await exchangerateclient.GetStringAsync(new Uri("http://api.fixer.io/latest?base=" + basecurrency));
                             exchangerateObject = JsonConvert.DeserializeObject<exchangerate.RootObject>(rate);
-                            var tocurrencyrate = exchangerateObject.rates.GetType().GetProperty(tocurrency).GetValue(exchangerateObject.rates, null);
-                            reply = activity.CreateReply($"The current exchange rate for {basecurrency} to {tocurrency} is {tocurrencyrate}.");*/
+                            string tocurrencyrate = "";
+
+                            foreach (var prop in exchangerateObject.rates.GetType().GetProperties())
+                            {
+                                if (prop.Name.ToLower() == tocurrency.ToLower())
+                                {
+                                    tocurrencyrate = prop.GetValue(exchangerateObject.rates, null).ToString();
+
+                                }
+                            }
+                            reply = activity.CreateReply($"The current exchange rate for {basecurrency} to {tocurrency} is {tocurrencyrate}.");
                         }
                         if (entity.Contains("accounts"))
                         {
