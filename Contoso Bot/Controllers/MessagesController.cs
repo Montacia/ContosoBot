@@ -199,7 +199,7 @@ namespace Contoso_Bot
                         replyToConversation.AttachmentLayout = "carousel";
                         //first card
                         List<CardImage> cardImages = new List<CardImage>();
-                        cardImages.Add(new CardImage(url: "https://cdn2.iconfinder.com/data/icons/ios-7-style-metro-ui-icons/512/MetroUI_iCloud.png"));
+                        cardImages.Add(new CardImage(url: "https://i.gyazo.com/9ea9995e5673b28d64d3b2215e99cb51.png"));
                         List<CardAction> cardButtons = new List<CardAction>();
                         CardAction plButton = new CardAction()
                         {
@@ -226,7 +226,7 @@ namespace Contoso_Bot
                         replyToConversation.Attachments.Add(plAttachment);
                         //Second card
                         List<CardImage> cardImages2 = new List<CardImage>();
-                        cardImages2.Add(new CardImage(url: "https://cdn2.iconfinder.com/data/icons/ios-7-style-metro-ui-icons/512/MetroUI_iCloud.png"));
+                        cardImages2.Add(new CardImage(url: "https://i.gyazo.com/93d38f7b620c125057c561420dda5f25.png"));
                         List<CardAction> cardButtons2 = new List<CardAction>();
                         CardAction plButton2 = new CardAction()
                         {
